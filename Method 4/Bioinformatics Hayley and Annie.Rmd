@@ -1,0 +1,41 @@
+---
+title: "Untitled"
+output: pdf_document
+date: "2025-02-11"
+---
+
+To screen biomarkers, we calculated the importance of diagnostic genes using three machine learning methods: random forest model (RF), support vector machine model (SVM), and generalized linear model (GLM) 
+
+
+The models were analyzed using the “DALEX” R package (version 2.3.0) to plot residual distributions, and algorithmic power box line plots to obtain the best model from which biomarkers were obtained
+```{r}
+#install.packages("DALEX")
+library(DALEX)
+```
+
+
+
+
+
+The nomogram of biomarkers was constructed using the “RMS” (version 6.1-0) R package to derive the relationship between biomarkers and diseases, and the calibration curves plotted by “RMS” (version 6.1-0) R package were used to validate the model
+
+
+```{r}
+#install.packages("rms")
+library(rms)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
