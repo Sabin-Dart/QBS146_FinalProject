@@ -19,9 +19,10 @@ library(ChAMP)
 library(RIdeogram)
 library(UpSetR)
 library(ChAMP)
-library(minfi)  # Required for data preprocessing
-library(Biobase)  # Handles ExpressionSet objects
+library(minfi)  
+library(Biobase)  
 library(GEOquery)
+library(EnhancedVolcano)
 ```
 # Load Data
 ```{r}
@@ -42,14 +43,45 @@ pheno_data$condition <- ifelse(grepl("varicose", pheno_data$description), 1, 0)
 
 myLoad <- list(beta = beta_values, pd = pheno_data)
 
-DMPs <- champ.DMP(beta = myLoad$beta, pheno = pheno_data$condition)
+DMPs <- champ.DMP(beta = myLoad$beta, pheno = pheno_data$condition, adjust.method="none")
 
-DMCs <- DMPs[[1]][DMPs[[1]]$P.Value < 0.05, ]
+DMCs <- DMPs[[1]]
+```
+
+# Figure 1A - Volcano Plot
+```{r}
+EnhancedVolcano(DMCs,
+    lab = rownames(DMCs),
+    x = 'logFC',
+    y = 'P.Value',
+    FCcutoff = 0,
+    title = "VV vs. Normal",
+    legendPosition="right")
 ```
 
 
+
 # 2.
-The "Rideogram" R package (version 0.2.2) was then used to visualize the chromosome annotation information of DMCs 
+The "Rideogram" R package (version 0.2.2) was then used to visualize the 
+chromosome annotation information of DMCs 
+```{r}
+#data("human_karyotype",package="RIdeogram")
+#ideogram(karyotype = human_karyotype)
+#convertSVG("chromosome.svg", device="png")
+
+rideogram_data <- data.frame(
+  Chr = DMCs$CHR,  
+  Start = DMCs$MAPINFO,                
+  End = DMCs$MAPINFO + 1,              
+  Value = 1000*DMCs$P.Value                    
+)
+
+
+# Pass the karyotype and feature data to RIdeogram
+ideogram(karyotype = human_karyotype, overlaid =  rideogram_data)
+convertSVG("chromosome.svg", device = "png")
+```
+
 
 # 3. 
 Finally, we compared the distribution of CpG sites in different regions within 
