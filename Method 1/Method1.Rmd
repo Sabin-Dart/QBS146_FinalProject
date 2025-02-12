@@ -18,13 +18,35 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ChAMP)
 library(RIdeogram)
 library(UpSetR)
-
+library(ChAMP)
+library(minfi)  # Required for data preprocessing
+library(Biobase)  # Handles ExpressionSet objects
+library(GEOquery)
 ```
+# Load Data
+```{r}
+geo_data <- getGEO("GSE68319", GSEMatrix = TRUE)
+methyl_data <- geo_data[[1]]
+```
+
 
 # 1.
 DMCs were obtained by comparing the methylation sites of VV and normal samples
 in the GSE68319 dataset using the "ChAMP" (version 2.20.1) R package with a 
 screening condition of p < 0.05 
+
+```{r}
+beta_values <- exprs(methyl_data)
+pheno_data <- pData(methyl_data)
+pheno_data$condition <- ifelse(grepl("varicose", pheno_data$description), 1, 0)
+
+myLoad <- list(beta = beta_values, pd = pheno_data)
+
+DMPs <- champ.DMP(beta = myLoad$beta, pheno = pheno_data$condition)
+
+DMCs <- DMPs[[1]][DMPs[[1]]$P.Value < 0.05, ]
+```
+
 
 # 2.
 The "Rideogram" R package (version 0.2.2) was then used to visualize the chromosome annotation information of DMCs 
