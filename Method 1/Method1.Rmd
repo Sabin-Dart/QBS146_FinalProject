@@ -46,17 +46,23 @@ myLoad <- list(beta = beta_values, pd = pheno_data)
 DMPs <- champ.DMP(beta = myLoad$beta, pheno = pheno_data$condition, adjust.method="none")
 
 DMCs <- DMPs[[1]]
+
+write.csv(DMCs, "DMCs.csv")
 ```
 
 # Figure 1A - Volcano Plot
 ```{r}
+png("volcano.png", width = 800, height = 1000)  
 EnhancedVolcano(DMCs,
     lab = rownames(DMCs),
     x = 'logFC',
     y = 'P.Value',
     FCcutoff = 0,
     title = "VV vs. Normal",
-    legendPosition="right")
+    legendPosition="right",
+    xlim = c(-0.2, 0.2),
+    ylim = c(1.3, 8.5))
+dev.off()
 ```
 
 
@@ -87,3 +93,9 @@ convertSVG("chromosome.svg", device = "png")
 Finally, we compared the distribution of CpG sites in different regions within 
 genes to obtain differentially methylated regions (DMRs) using the "UpSetR"
 (version 1.4.0) R package
+```{r}
+png("pie_chart.png", width = 800, height = 800)  
+pie(table(DMCs$feature), col = c("skyblue", "firebrick", "orange", "deeppink", "purple", "lightgreen", "khaki"))
+dev.off()
+```
+
