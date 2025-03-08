@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Libraries
-```{r}
+```{r, echo=FALSE}
 library(GEOquery)
 library(tidyverse)
 #BiocManager::install("edgeR")
@@ -18,7 +18,7 @@ library(edgeR)
 library(EnhancedVolcano)
 library(pheatmap)
 library(RColorBrewer)
-
+library(illuminaHumanv4.db)
 ```
 # Load Data
 ```{r}
@@ -54,14 +54,27 @@ result <- glmQLFTest(fit, coef=2)  # Adjust the coefficient if needed
 
 # screening condition to get DEGs
 degs <- topTags(result, n=Inf)$table
-degs_filtered <- subset(degs, abs(logFC) > 0.5 & PValue < 0.05)
+degs_filtered <- subset(degs, abs(logFC) > 0.5 & PValue < 0.05) %>% 
+  mutate("IlluminaID" = rownames(degs_filtered))
+
+# replace Illumina IDs with gene names
+gene_symbols <- mget(x = rownames(degs_filtered),
+                     envir = illuminaHumanv4SYMBOL, ifnotfound = NA)
+gene_symbols <- unlist(gene_symbols)
+gene_symbols[is.na(gene_symbols)] <- rownames(degs_filtered)[is.na(gene_symbols)]
+gene_symbols <- make.unique(gene_symbols)
+rownames(degs_filtered) <- gene_symbols
+
+
 
 # View top differentially expressed genes
 head(degs_filtered)
 ```
 
+# visualize
 ```{r}
-
+# volcano plot
+png("volcano2.png", width = 1200, height = 1000)  
 EnhancedVolcano(degs,
     lab = rownames(degs),
     x = 'logFC',
@@ -69,17 +82,36 @@ EnhancedVolcano(degs,
     FCcutoff = 0.5,
     pCutoff = 0.05,
     title = "VV vs. Normal",
-    legendPosition="right")
+    legendPosition="right",
+    xlim = c(-2, 2),
+    ylim = c(0, 5))
+dev.off()
 
-    xlim = c(-0.2, 0.2),
-    ylim = c(1.3, 8.5))
+# heatmap
+degs_matrix <- expres_dat[rownames(expres_dat) %in% degs_filtered$IlluminaID, ]
+gene_symbols <- mget(x = rownames(degs_matrix),
+                     envir = illuminaHumanv4SYMBOL, ifnotfound = NA)
+gene_symbols <- unlist(gene_symbols)
+gene_symbols[is.na(gene_symbols)] <- rownames(degs_matrix)[is.na(gene_symbols)]
+gene_symbols <- make.unique(gene_symbols)
+rownames(degs_matrix) <- gene_symbols
+scaled <- t(scale(t(degs_matrix)))  # Standardize across genes
 
-ggplot(degs, aes(x=logFC, y=-log10(PValue))) +
-  geom_point(alpha=0.5) +
-  geom_vline(xintercept=c(-0.5, 0.5), linetype="dashed", color="red") +
-  geom_hline(yintercept=-log10(0.05), linetype="dashed", color="blue") +
-  theme_minimal() +
-  labs(title="Volcano Plot of DEGs", x="log2 Fold Change", y="-log10 P-Value")
+my_palette <- colorRampPalette(c("blue", "white", "red"))(100)
+sample_annotation <- data.frame(Group = group)
+rownames(sample_annotation) <- colnames(expres_dat)  # Match column names
+
+png("heatmap.png", width = 1000, height = 800)  
+pheatmap(scaled,
+         color = my_palette,  
+         cluster_rows = TRUE,   # Cluster genes
+         cluster_cols = FALSE,  # Do NOT cluster samples
+         annotation_col = sample_annotation,  # Add sample grouping
+         show_rownames = TRUE,  
+         show_colnames = FALSE,  
+         scale = "row",  
+         fontsize_row = 10)
+dev.off()
 
 ```
 
