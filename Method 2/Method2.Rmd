@@ -178,7 +178,7 @@ KEGG_results <- enrichKEGG(
 
 
 # Plot results
-barplot(KEGG_results, showCategory = 10)
+barplot(KEGG_results, showCategory = 10, title = "KEGG Enrichment Analysis")
 
 
 ```
