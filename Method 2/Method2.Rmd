@@ -54,7 +54,9 @@ result <- glmQLFTest(fit, coef=2)  # Adjust the coefficient if needed
 
 # screening condition to get DEGs
 degs <- topTags(result, n=Inf)$table
-degs_filtered <- subset(degs, abs(logFC) > 0.5 & PValue < 0.05) %>% 
+degs_filtered <- subset(degs, abs(logFC) > 0.5 & PValue < 0.05) 
+
+degs_filtered <- degs_filtered %>% 
   mutate("IlluminaID" = rownames(degs_filtered))
 
 # replace Illumina IDs with gene names
@@ -112,6 +114,72 @@ pheatmap(scaled,
          scale = "row",  
          fontsize_row = 10)
 dev.off()
+
+```
+
+# Libraries
+```{r, echo=FALSE}
+library(clusterProfiler)
+library(org.Hs.eg.db)  # For human gene annotation
+```
+
+# Part 2
+```{r}
+DEGs <- degs_filtered
+DEGs$gene <- rownames(DEGs)
+DMCs <- read_csv("../Method 1/DMCs.csv")
+
+# Categorize genes based on methylation changes
+hypermethylated_genes <- DMCs %>%
+  filter(logFC > 0) %>%
+  pull(gene) %>% unique()
+
+demethylated_genes <- DMCs %>%
+  filter(logFC < 0) %>%
+  pull(gene) %>% unique()
+
+
+# get VV-MRGs
+MRGs_hyper_low <- intersect(hypermethylated_genes, DEGs %>% filter(logFC < 0) %>% pull(gene))
+MRGs_hypo_high <- intersect(demethylated_genes, DEGs %>% filter(logFC > 0) %>% pull(gene))
+
+# Combine MRG lists
+MRGs <- unique(c(MRGs_hyper_low, MRGs_hypo_high))
+
+MRGs
+
+MRGs_entrez <- bitr(MRGs, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")$ENTREZID
+```
+
+# visualize
+```{r}
+# GO
+GO_results <- enrichGO(
+  gene = MRGs_entrez,
+  OrgDb = org.Hs.eg.db,
+  keyType = "ENTREZID",
+  ont = "BP",  # Can also try "BP", "CC", or "MF"
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.05
+)
+
+# Plot results
+barplot(GO_results, showCategory = 10, title = "GO Enrichment Analysis")
+
+
+
+# KEGG
+KEGG_results <- enrichKEGG(
+  gene = MRGs_entrez,
+  organism = "hsa",
+  pAdjustMethod = "none",
+  pvalueCutoff = 0.05
+)
+
+
+# Plot results
+barplot(KEGG_results, showCategory = 10)
+
 
 ```
 
